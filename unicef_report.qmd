@@ -1,0 +1,270 @@
+---
+title: "UNICEF Data Analysis Report"
+format: 
+  html:
+    embed-resources: true
+    code-fold: true
+execute:
+  echo: true
+---
+
+## Introduction
+
+Children’s rights and development are critical to building a nation’s future.  
+This report leverages UNICEF’s data to highlight key indicators across countries, focusing on:
+
+- Health outcomes
+- Educational progress
+- Nutritional status
+- Child protection measures
+
+Our goal is to uncover meaningful trends that can guide effective, data-driven interventions.
+
+
+---
+
+## Data Exploration Journey
+
+To better understand how children's well-being varies across the world,  
+we explore the available UNICEF indicators through a series of visualizations.
+
+We start by examining which countries stand out based on their average observed values.  
+Then, we trace the evolution of these values over time, highlighting differences between males and females.  
+Finally, we zoom out to a global perspective with a colorful world map showing the latest data across nations.
+
+These visual insights help reveal both progress and persistent challenges in child development across regions.
+
+
+```{python}
+# Import libraries
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+from plotnine import *
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load dataset
+df = pd.read_csv("unicef_indicator_2.csv")
+
+# Clean: Group by country and take the mean (or max) observed value
+df_clean = (
+    df.groupby('country', as_index=False)
+      .agg({'obs_value':'mean'})
+)
+
+# Sort and select top 10 countries
+top10 = df_clean.sort_values(by='obs_value', ascending=False).head(10)
+
+# For pie chart, calculate top 5
+top5 = df.sort_values(by='obs_value', ascending=False).head(5)
+
+# Display first few rows
+df.head()
+
+# Table of Top 10 Countries
+top10 = top10.reset_index(drop=True)
+top10.index = top10.index + 1
+top10
+
+```
+### Focusing on the Leaders
+
+To identify which countries have the highest average outcomes,  
+we visualize the Top 10 countries based on their observed values.  
+This helps highlight regions making significant progress in key child development indicators.
+
+## Summary of Average Observed Values by Country
+
+The table below displays the average observed values across countries, providing a snapshot of key performers.  
+Identifying countries with the highest averages enables targeted focus for deeper analysis.
+
+## Interactive Visualization of Top 10 Countries
+```{python}
+
+
+fig = px.bar(
+    top10,
+    x='obs_value',
+    y='country',
+    orientation='h',
+    text='obs_value',
+    color='obs_value',
+    color_continuous_scale='Blues',
+    title="Top 10 Countries by Observed Value (Interactive)"  # Simple string here
+)
+
+fig.update_layout(
+    title={
+        'text': "Top 10 Countries by Observed Value",
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {'size': 24}
+    },
+    margin=dict(t=100),
+    xaxis_title='Observed Value',
+    yaxis_title='Country',
+    plot_bgcolor='white'
+)
+
+fig.update_traces(
+    texttemplate='%{text:.1f}',
+    textposition='outside'
+)
+
+fig.show()
+
+```
+### Understanding Trends Over Time
+
+Beyond averages, it’s crucial to explore how countries have evolved over time.  
+In the next visualization, we track the observed values across different periods, separated by gender,  
+to spot improvements, declines, or emerging patterns in children's well-being.
+
+## Observed Values Over Time
+
+To understand how progress unfolds over time, we plot observed values across different years, separated by sex.  
+This view highlights patterns, fluctuations, and trends that reveal the trajectory of child development indicators globally.
+
+
+```{python}
+# 1. Prepare Figure
+fig = go.Figure()
+
+# 2. Loop through each country and add Male and Female separately
+for country in df['country'].unique():
+    df_country = df[df['country'] == country]
+    
+    for sex, color in zip(['Male', 'Female'], ['blue', 'red']):  # Male in blue, Female in red
+        df_sex = df_country[df_country['sex'] == sex]
+        
+        fig.add_trace(go.Scatter(
+            x=df_sex['time_period'],
+            y=df_sex['obs_value'],
+            mode='lines+markers',         # <-- Keep lines + points
+            name=f"{country} - {sex}",
+            line_shape="spline",          # <-- Smooth curves
+            line=dict(color=color, width=2), # <-- Make lines slightly thicker
+            opacity=0.4                   # <-- Light opacity to reduce clutter
+        ))
+
+# 3. Update Layout
+fig.update_layout(
+    title={
+        'text': "Observed Values Over Time: Male vs Female Across Countries",
+        'x':0.5,
+        'xanchor': 'center',
+        'font': dict(size=24)
+    },
+    xaxis_title="Time Period",
+    yaxis_title="Observed Value",
+    template="plotly_white",
+    hovermode="x unified",
+    legend_title="Country - Sex",
+    height=700,
+    margin=dict(t=100, l=50, r=50, b=50),
+)
+
+# 4. Show figure
+fig.show()
+
+```
+### Deep Dive into Specific Countries
+
+While general trends are useful, it's also important to focus on particular countries individually.  
+Here, we zoom into selected countries to better understand their unique journeys.  
+A scatter plot with a linear regression line helps highlight the overall direction of change — whether progress is accelerating, slowing down, or remaining steady.
+
+## Trend of Observed Values by Country
+
+Beyond static averages, it’s essential to explore temporal trends at the country level.  
+The scatter plot below includes a fitted regression line to summarize the overall trend across selected countries.
+
+```{python}
+# 📌 First: Filter your DataFrame for specific countries
+selected_countries = ["Cameroon", "Ethiopia", "Haiti", "Nigeria"]
+df_filtered = df[df['country'].isin(selected_countries)]
+
+# 📌 Second: Create the scatter plot with a regression line
+import plotly.express as px
+
+fig = px.scatter(
+    df_filtered,
+    x="time_period",
+    y="obs_value",
+    color="country",
+    trendline="ols",  # Add ordinary least squares regression
+    trendline_scope="overall",  # Single regression line for all data
+    title="Scatter Plot with Linear Regression Line",
+    labels={
+        "time_period": "Time Period",
+        "obs_value": "Observed Value",
+        "country": "Country"
+    },
+    template="plotly_white"
+)
+
+# 📌 Third: Beautify the chart layout
+fig.update_layout(
+    title={
+        'text': "Scatter Plot with Linear Regression Line (Combined)",
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': dict(size=24)
+    },
+    height=600,
+    legend_title="Country",
+    margin=dict(t=80, l=50, r=50, b=50),
+)
+
+# 📌 Fourth: Show the final figure
+fig.show()
+
+```
+
+### Global Overview of Observed Values
+
+After exploring individual country trends, it's valuable to step back and look at the bigger picture.  
+The following world map presents the latest observed value for each available country.  
+This visualization helps identify regional disparities, highlight clusters of progress, and spot areas where targeted interventions might be most needed.
+
+
+```{python}
+# Take the latest value for each country (even if years differ)
+df_latest = df.sort_values('time_period').groupby('country').tail(1)
+
+fig = go.Figure(data=go.Choropleth(
+    locations=df_latest['country'],
+    locationmode='country names',
+    z=df_latest['obs_value'],
+    colorscale='Viridis',
+    colorbar_title='Observed Value',
+    marker_line_color='white',
+    marker_line_width=0.5,
+))
+
+fig.update_layout(
+    title_text='World Map of Observed Value (Latest Available per Country)',
+    title_x=0.5,
+    geo=dict(
+        showframe=False,
+        showcoastlines=True,
+        coastlinecolor="white",
+        showland=True,
+        landcolor="rgb(217, 217, 217)",
+        oceancolor="rgb(173, 216, 230)",
+        showocean=True,
+        projection_type='natural earth'
+    ),
+    template="plotly_white",
+    margin=dict(t=50, l=0, r=0, b=0),
+)
+
+fig.show()
+
+```
+## Conclusion
+
+This report provides an analytical overview of key child development indicators across countries, using UNICEF’s valuable dataset.  
+Through interactive visualizations, we identified both high-performing regions and areas needing urgent intervention.  
+Future efforts should focus on sustaining gains, closing regional gaps, and ensuring that no child is left behind.
