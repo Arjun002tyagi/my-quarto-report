@@ -4,6 +4,7 @@ format:
   html:
     embed-resources: true
     code-fold: true
+    output-file: index.html
 execute:
   echo: true
 ---
@@ -263,6 +264,53 @@ fig.update_layout(
 fig.show()
 
 ```
+# Animated Rotating Pie Chart of Top 10 Countries by Observed Value
+
+This visualization presents an interactive and animated pie chart displaying the top 10 countries based on their observed values.  
+Built using Plotly, the chart starts with a static view and offers a **"Play"** button to trigger a smooth 360-degree rotation animation.  
+Each frame of the animation gradually rotates the pie chart, providing a dynamic and engaging way to explore the distribution of values among the countries.  
+The chart also features a clean design with a slight hole in the center (creating a donut chart effect) and a clear title to enhance readability.
+
+```{python}
+import numpy as np
+
+labels = top10['country']
+values = top10['obs_value']
+
+fig = go.Figure()
+
+# Add the initial pie chart
+fig.add_trace(
+    go.Pie(labels=labels, values=values, hole=0.3, rotation=0)
+)
+
+# Create 30 frames rotating the chart
+fig.frames = [
+    go.Frame(
+        data=[go.Pie(labels=labels, values=values, hole=0.3, rotation=angle)],
+        name=str(angle)
+    )
+    for angle in np.linspace(0, 360, 30)
+]
+
+# Add play button for animation
+fig.update_layout(
+    title_text="Top 10 Countries by Observed Value",
+    title_font_size=24,
+    updatemenus=[{
+        "type": "buttons",
+        "buttons": [{
+            "label": "Play",
+            "method": "animate",
+            "args": [None, {"frame": {"duration": 100, "redraw": True}, "fromcurrent": True}]
+        }]
+    }],
+    margin=dict(t=100, b=50),
+)
+
+fig.show()
+```
+
 ## Conclusion
 
 This report provides an analytical overview of key child development indicators across countries, using UNICEF’s valuable dataset.  
